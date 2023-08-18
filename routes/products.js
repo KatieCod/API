@@ -1,9 +1,7 @@
 var express = require('express');
 var router = express.Router();
-const getProducts = require('../getProducts') 
-const getProduct = require('../getProduct') 
-
-let theProducts;
+const getProducts = require('../data_manager/getProducts') 
+const getProduct = require('../data_manager/getProduct') 
 
 /* GET users listing. */
 router.get('/', async function(req, res, next) {
@@ -18,7 +16,7 @@ router.get('/', async function(req, res, next) {
 router.get('/:id', async function(req, res, next) {
   const id = req.params.id
   const product = await getProduct(id)
-  res.send(product)
+  res.json(product)
 })
 
 module.exports = router;
