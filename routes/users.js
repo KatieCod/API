@@ -81,8 +81,6 @@ router.post('/login', async function (req, res, next) {
   }
 })
 
-module.exports = router;
-
 router.post('/register', async function (req, res, next) {
   try {
     const registerAttempt = req.body
@@ -118,3 +116,4 @@ router.post('/register', async function (req, res, next) {
 // }
 
 
+module.exports = router;
