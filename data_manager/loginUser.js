@@ -8,7 +8,7 @@ const connection = mysql.createConnection({
     database: 'shop'
 });
 
-async function loginUser(email, password) {
+async function loginUser(email) {
     try {
         const result = await new Promise((resolve, reject) => {
             const sqlQuery = `SELECT * FROM users WHERE email = ?`;
