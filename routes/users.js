@@ -1,46 +1,51 @@
 var express = require('express');
 var router = express.Router();
-var jwt = require('jsonwebtoken'); 
-const cookieParser = require('cookie-parser')
+var jwt = require('jsonwebtoken');
 
 const getUser = require('../data_manager/getUser')
 const getUsers = require('../data_manager/getUsers')
 const loginUser = require('../data_manager/loginUser')
 const registerUser = require('../data_manager/registerUser')
+const checkUserID = require('../data_manager/checkUserID');
+const changePassword = require('../data_manager/changePassword');
+const { link } = require('.');
+
+const secret = JWT_SECRET = 'hey there secret!'
 
 router.use(express.json())
 
-const verifyUser = (req, res, next) => {
-  const token = req.cookies.token
-  if(!token){
-    return res.json({failure: "You are guest"})
-  } else {
-    jwt.verify(token, "some-secret-key", (err, decoded) => {
-      if (err){
-        return {failure: "Token is not OK"}
-      } else {
-        req.dBanswer = decoded.dBanswer
-        next()
-      }
-    })
-  }
-}
+// const verifyUser = (req, res, next) => {
+//   const name = req.session.first_name
+//   if (!name) {
+//     return res.json({ failure: "You are guest" })
+//   } else {
+//     jwt.verify(token, "some-secret-key", (err, decoded) => {
+//       if (err) {
+//         return { failure: "Token is not OK" }
+//       } else {
+//         req.user = decoded.user
+//         next()
+//       }
+//     })
+//   }
+// }
 
-/* GET home page. */
-router.get('/currentUser', verifyUser, (req, res) => {
-  console.log('hahaha')
-  res.json(req.dBanswer)
-}) 
+router.get('/currentUser', (req, res) => { // removed middlewear verifyUser
+  if (req.session.authorized) {
+    const currentUser = req.session.user
+    res.json(currentUser)
+  }
+})
 
 /* GET users listing. */
-// router.get('/all', async function (req, res, next) {
-//   try {
-//     const users = await getUsers();
-//     res.json(users);
-//   } catch (error) {
-//     res.status(500).json({ error: "an error happened" })
-//   }
-// });
+router.get('/all', async function (req, res, next) {
+  try {
+    const users = await getUsers();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: "an error happened" })
+  }
+});
 
 // router.get('/:id', async function (req, res, next) {
 //   const id = req.params.id
@@ -61,16 +66,16 @@ router.get('/currentUser', verifyUser, (req, res) => {
 router.post('/login', async function (req, res, next) {
   try {
     const loginAttempt = req.body
-    const dBanswer = await loginUser(loginAttempt.email, loginAttempt.password)
+    console.log(loginAttempt)
+    const user = await loginUser(loginAttempt.email)
     let answer = ''
-    if (!dBanswer) {
+    if (!user) {
       answer = { failure: "no such user" }
     } else {
-      if (dBanswer.password == loginAttempt.password) {
-        answer = {success: 'all cool'}
-        console.log(dBanswer);
-        const token = jwt.sign({ dBanswer }, "some-secret-key", { expiresIn: '1d' });
-        res.cookie('token', token);
+      if (user.password == loginAttempt.password) {
+        req.session.user = user;
+        req.session.authorized = true;
+        answer = { success: 'all cool' }
       } else {
         answer = { failure: "wrong password" }
       }
@@ -85,7 +90,6 @@ router.post('/register', async function (req, res, next) {
   try {
     const registerAttempt = req.body
     const dataBase = await registerUser(registerAttempt.email, registerAttempt.password, registerAttempt.first_name, registerAttempt.last_name, registerAttempt.phone)
-    console.log(dataBase)
     let answer = ''
     if (!dataBase) {
       answer = { failure: "User already exists" }
@@ -98,22 +102,54 @@ router.post('/register', async function (req, res, next) {
   }
 })
 
-// const varifyUser = (req, res, next) => {
-//   const token = req.cookies.token;
-//   if(!token) {
-//     return res.json({error: 'you are not authenticated'});
-//   } else {
-//     jwt.verify(token, 'jwt-secret-key', (err, decoded) => {
-//       if(err) {
-//         return {failure: 'token is not okay'};
-//       } else {
-//         console.log(req)
-//         req.dBanswer=decoded.dBanswer;
-//         next()
-//       }
-//     })
-//   }
-// }
+router.get('/logout', (req, res) => {
+  req.session.destroy();
+  return res.json({ status: 'success' })
+})
 
+router.post('/forgot-password', async function (req, res, next) {
+  try {
+    const { email } = req.body;
+    const user = await loginUser(email);
+    let answer = '';
+    if (!user) {
+      answer = { failure: "no such user" }
+    } else {
+      const secretWord = secret + user.password;
+      const token = jwt.sign({ user }, secretWord, { expiresIn: '1d' })
+      const link = `http://localhost:3000/reset_success${user.id}/${token}`
+      answer = {link: link, id: user.id, token: token};
+    }
+    res.status(201).json(answer)
+  } catch (error) {
+    res.status(500).json({ error: "an error happened" })
+  }
+})
+
+router.post('/resest-password/:id/:token', async function (req, res, next) {
+  const { id, token } = req.params;
+  const { password } = req.body;
+  const user = await checkUserID(id);
+  let answer = '';;
+  if (!user) {
+    answer = { failure: "invalid ID" }
+  } else {
+    const secretWord = secret + user.password;
+    try {
+      jwt.verify(token, secretWord, (err, decoded) => {
+        if (err) {
+          return { failure: "verification is not fine" }
+        } else {
+          const payload = decoded;
+          changePassword(password, payload.user.email)
+          answer = payload.user.email
+        }
+      })
+      res.status(201).json(answer)
+    } catch (err) {
+      console.log(err)
+    }
+  }
+})
 
 module.exports = router;

@@ -6,10 +6,24 @@ var logger = require('morgan');
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var productsRouter = require('./routes/products');
-var bcrypt = require('bcrypt'); 
-const cors = require('cors')
+var counterRouter = require('./routes/counter');
+var cartRouter = require('./routes/cart');
+var ordersRouter = require('./routes/orders');
+var categoryRouter = require('./routes/category');
+var skinTypeRouter = require('./routes/skinType');
+var reviewsRouter = require('./routes/reviews');
+
+const cors = require('cors');
+const session = require('express-session'); 
 
 var app = express();
+
+app.use(session({
+  secret: 'thisisthebestsecretworldintheworld!',
+  resave: false,
+  cookie:  {maxAge: 1000*60*30},
+  saveUninitialized: false
+}))
 
 app.use(cors(
   {origin: ['http://localhost:3000'],
@@ -29,7 +43,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/products', productsRouter);
-
+app.use('/counter', counterRouter);
+app.use('/cart', cartRouter);
+app.use('/orders', ordersRouter);
+app.use('/category', categoryRouter);
+app.use('/skinType', skinTypeRouter);
+app.use('/reviews', reviewsRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
