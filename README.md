@@ -32,7 +32,7 @@ Express.js back-end is connected to a SQL database using the Sequelize Object-Re
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/e-commerce.git
+   git clone https://github.com/KatieCod/e-commerce-website_BE.git
 
 2. Navigate to the front-end directory:
 
